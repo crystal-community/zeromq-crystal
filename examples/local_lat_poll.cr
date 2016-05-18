@@ -1,13 +1,13 @@
 require "../src/zeromq"
 
-if ARGV.size < 3
-  puts "usage: crystal local_lat_poll.cr <connect-to> <message-size> <roundtrip-count>"
+if ARGV.size < 2
+  puts "usage: crystal local_lat_poll.cr <message-size> <roundtrip-count>"
   exit
 end
 
-link = ARGV[0]
-message_size = ARGV[1].to_i
-roundtrip_count = ARGV[2].to_i
+link = "tcp://127.0.0.1:5555"
+message_size = ARGV[0].to_i
+roundtrip_count = ARGV[1].to_i
 
 begin
   ctx = ZMQ::Context.new
@@ -32,7 +32,7 @@ start_time = Time.now
 
 # kick it off
 message = ZMQ::Message.new("a" * message_size)
-p s1.send_message(message, ZMQ::DONTWAIT)
+s1.send_message(message, ZMQ::DONTWAIT)
 
 i = roundtrip_count
 
@@ -51,9 +51,10 @@ span = (Time.now - start_time)
 latency = span.ticks.to_f / roundtrip_count / 2.0
 
 puts "mean latency: %.3f [us]" % latency
+puts "messages per second: %.3f " % (roundtrip_count / span.total_seconds)
 puts "received all messages in %.3f ms" % (span.total_milliseconds)
 
-p s1.close
-p s2.close
+s1.close
+s2.close
 
 ctx.terminate
