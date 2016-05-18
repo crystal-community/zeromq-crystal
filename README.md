@@ -35,8 +35,8 @@ end
 
 # Simple client
 context = ZMQ::Context.new
-client = context.socket(ZMQ::REP)
-client.bind("tcp://127.0.0.1:5555")
+client = context.socket(ZMQ::REQ)
+client.connect("tcp://127.0.0.1:5555")
 
 client.send_string("Fetch")
 puts client.receive_string
