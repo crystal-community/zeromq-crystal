@@ -1,16 +1,16 @@
 # zeromq
 
-TODO: Write a description here
+Bindings for ZeroMQ (http://zero.mq)
+Ported from (https://github.com/chuckremes/ffi-rzmq-core) Thank you @chuckremes
 
 ## Installation
-
 
 Add this to your application's `shard.yml`:
 
 ```yaml
 dependencies:
   zeromq:
-    github: [your-github-name]/zeromq
+    github: [benoist]/zeromq-crystal
 ```
 
 
@@ -21,16 +21,35 @@ dependencies:
 require "zeromq"
 ```
 
+```crystal
 
-TODO: Write usage instructions here
+# Simple server
+context = ZMQ::Context.new
+server = context.socket(ZMQ::REP)
+server.bind("tcp://127.0.0.1:5555")
 
-## Development
+loop do
+    puts server.receive_string
+    server.send_string("Got it")
+end
 
-TODO: Write development instructions here
+# Simple client
+context = ZMQ::Context.new
+client = context.socket(ZMQ::REP)
+client.bind("tcp://127.0.0.1:5555")
+
+client.send_string("Fetch")
+puts client.receive_string
+```
+
+## TODO
+
+- [ ] Add tests
+- [ ] Add more examples
 
 ## Contributing
 
-1. Fork it ( https://github.com/[your-github-name]/zeromq/fork )
+1. Fork it ( https://github.com/benoist/zeromq-crystal/fork )
 2. Create your feature branch (git checkout -b my-new-feature)
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin my-new-feature)
@@ -38,4 +57,4 @@ TODO: Write development instructions here
 
 ## Contributors
 
-- [[your-github-name]](https://github.com/[your-github-name]) Benoist Claassen - creator, maintainer
+- [Benoist](https://github.com/benoist) Benoist Claassen - creator, maintainer
