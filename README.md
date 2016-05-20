@@ -10,7 +10,7 @@ Add this to your application's `shard.yml`:
 ```yaml
 dependencies:
   zeromq:
-    github: [benoist]/zeromq-crystal
+    github: benoist/zeromq-crystal
 ```
 
 
