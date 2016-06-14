@@ -29,31 +29,29 @@ class ZMQ::Socket(T)
     send_messages(parts, flags)
   end
 
-  def send_message(message, flags = 0)
+  def send_message(message : Message, flags = 0)
     rc = LibZMQ.sendmsg(@socket, message.address, flags)
     message.close
     Util.resultcode_ok?(rc)
   end
 
   def send_messages(messages : Array(Message), flags = 0)
-    if !messages || messages.empty?
-      -1
-    else
-      flags = DONTWAIT if dontwait?(flags)
-      rc = 0
+    return false if !messages || messages.empty?
+    flags = DONTWAIT if dontwait?(flags)
+    rc = false
 
-      messages[0..-2].each do |message|
-        rc = send_message(message, (flags | ZMQ::SNDMORE))
-        break unless Util.resultcode_ok?(rc)
-      end
-
-      Util.resultcode_ok?(rc) ? send_message(messages[-1], flags) : rc
+    messages[0..-2].each do |message|
+      rc = send_message(message, (flags | ZMQ::SNDMORE))
+      break unless rc # Util.resultcode_ok?(rc)
     end
+
+    rc ? send_message(messages[-1], flags) : rc
   end
 
   def receive_message(flags = 0)
     message = T.new
     LibZMQ.recvmsg(@socket, message.address, flags)
+
     message
   end
 
@@ -74,7 +72,7 @@ class ZMQ::Socket(T)
     if Util.resultcode_ok?(rc)
       messages << message
       while Util.resultcode_ok?(rc) && more_parts?
-        message = T.new
+        message = T.new # T.new
         rc = LibZMQ.recvmsg(@socket, message.address, flags)
 
         if Util.resultcode_ok?(rc)
