@@ -13,7 +13,7 @@ module APIHelper
 
   def with_req_rep
     endpoint = "inproc://reqrep_test"
-    ctx  = ZMQ::Context.new
+    ctx = ZMQ::Context.new
 
     ping = ctx.socket ZMQ::REQ
     pong = ctx.socket ZMQ::REP
@@ -32,7 +32,7 @@ module APIHelper
     string = "boogi-boogi"
     msg = ZMQ::Message.new string
 
-    ctx  = ZMQ::Context.new
+    ctx = ZMQ::Context.new
     push = ctx.socket ZMQ::PUSH
     pull = ctx.socket ZMQ::PULL
 
@@ -41,19 +41,18 @@ module APIHelper
 
     yield ctx, push, pull, link
 
-
     [push, pull].each { |sock| sock.close }
     ctx.terminate
   end
 
-  def connect_to_inproc(socket :  ZMQ::Socket, endpoint : String, timeout = 3)
+  def connect_to_inproc(socket : ZMQ::Socket, endpoint : String, timeout = 3)
     started = Time.now
     loop do
       break if socket.connect(endpoint) || (started - Time.now).seconds > timeout # ZMQ::Util.resultcode_ok?(rc)
     end
   end
 
-  def poller_register_socket(socket :  ZMQ::Socket)
+  def poller_register_socket(socket : ZMQ::Socket)
     HELPER_POLLER.register(socket, ZMQ::POLLIN)
   end
 
@@ -79,7 +78,7 @@ module APIHelper
   def bind_to_random_tcp_port(socket, max_tries = 500)
     rc, port = nil, nil
     max_tries.times do
-      break if rc = socket.connect(local_transport_string(port = random_port)) #!ZMQ::Util.resultcode_ok?(rc)
+      break if rc = socket.connect(local_transport_string(port = random_port)) # !ZMQ::Util.resultcode_ok?(rc)
     end
 
     unless rc

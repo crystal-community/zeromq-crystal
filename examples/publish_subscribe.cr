@@ -43,14 +43,13 @@ identity = s2.receive_string if s2.more_parts?
 puts "s2 received topic [#{topic}], body [#{body}], identity [#{identity}]"
 
 topic = s3.receive_string
-
-body = s3.receive_string if s3.more_parts?
-puts "s3 received topic [#{topic}], body [#{body}]"
+body = s3.receive_string
+identity = s3.receive_string if s3.more_parts?
+puts "s3 received topic [#{topic}], body [#{body}], identity [#{identity}]"
 
 topic, body, identity = s4.receive_strings
 
-# body = s4.receive_string if s4.more_parts?
-puts "s4 received topic [#{topic}], body [#{body}]"
+puts "s4 received topic [#{topic}], body [#{body}], identity [#{identity}]"
 
 [s1, s2, s3, s4].each do |socket|
   socket.close

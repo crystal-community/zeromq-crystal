@@ -72,8 +72,7 @@ class ZMQ::Socket(T)
     if Util.resultcode_ok?(rc)
       messages << message
       while Util.resultcode_ok?(rc) && more_parts?
-        message = T.new # T.new
-        rc = LibZMQ.recvmsg(@socket, message.address, flags)
+        message = receive_message(flags)
 
         if Util.resultcode_ok?(rc)
           messages << message
@@ -153,7 +152,7 @@ class ZMQ::Socket(T)
   end
 
   def more_parts?
-    get_socket_option RCVMORE
+    get_socket_option(RCVMORE).as(Int64) > 0
   end
 
   def dontwait?(flags)

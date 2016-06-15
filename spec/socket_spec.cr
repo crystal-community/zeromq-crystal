@@ -40,6 +40,19 @@ describe ZMQ::Socket do
     end
   end
 
+  context "socket-options" do
+    it "more_parts returns true or false" do
+      APIHelper.with_req_rep do |ctx, ping, pong|
+        ping.send_message(ZMQ::Message.new(STRING), ZMQ::SNDMORE).should be_true
+        ping.send_message(ZMQ::Message.new(STRING)).should be_true
+        pong.receive_message.to_s.should eq(STRING)
+        pong.more_parts?.should eq true
+        pong.receive_message.to_s.should eq(STRING)
+        pong.more_parts?.should eq false
+      end
+    end
+  end
+
   context "push-pull" do
     it "should receive an exact copy of the sent string directly on one pull socket" do
       APIHelper.with_push_pull do |ctx, push, pull|
@@ -63,11 +76,10 @@ describe ZMQ::Socket do
 
     it "receive a message for each message sent on socket listening with an equal number of sockets pulls messages and is unique per thread" do
       APIHelper.with_push_pull do |ctx, push, pull, link|
-
         string = "boogi-boogi"
         received = [] of String
         sockets = [] of ZMQ::Socket(ZMQ::Message)
-        count    = 4
+        count = 4
         channel = Channel(String).new
 
         # make sure all sockets are connected before we do our load-balancing test
