@@ -11,24 +11,25 @@ module APIHelper
     pong.receive_string
   end
 
-  def with_req_rep
-    endpoint = "inproc://reqrep_test"
-    ctx = ZMQ::Context.new
+  def with_req_rep(endpoint = "inproc://reqrep_test", req_type = ZMQ::REQ, rep_type = ZMQ::REP)
+    ctx  = ZMQ::Context.new
 
-    ping = ctx.socket ZMQ::REQ
-    pong = ctx.socket ZMQ::REP
+    req = ctx.socket req_type
+    rep = ctx.socket rep_type
 
-    pong.bind(endpoint)
-    connect_to_inproc(ping, endpoint)
+    req.identity = "req"
+    rep.identity = "rep"
 
-    yield ctx, ping, pong, endpoint
+    rep.bind(endpoint)
+    connect_to_inproc(req, endpoint)
 
-    [ping, pong].each { |sock| sock.close }
+    yield ctx, req, rep, endpoint
+
+    [req, rep].each { |sock| sock.close }
     ctx.terminate
   end
 
-  def with_push_pull
-    link = "inproc://push_pull_test"
+  def with_push_pull(link = "inproc://push_pull_test")
     string = "boogi-boogi"
     msg = ZMQ::Message.new string
 
@@ -37,7 +38,7 @@ module APIHelper
     pull = ctx.socket ZMQ::PULL
 
     push.bind link
-    APIHelper.connect_to_inproc pull, link
+    connect_to_inproc pull, link
 
     yield ctx, push, pull, link
 
