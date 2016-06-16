@@ -1,7 +1,9 @@
 module ZMQ
   class Message
+    getter? closed
+
     def initialize(message : String? = nil)
-      @pointer = LibZMQ::Msg.new
+      @closed, @pointer = false, LibZMQ::Msg.new
 
       if message
         LibZMQ.msg_init_data(address, message.to_unsafe.as(Void*), message.size, ->(a, b) { LibC.free(b) }, nil)
@@ -22,7 +24,12 @@ module ZMQ
       LibZMQ.msg_size address
     end
 
+    def finalize
+      close
+    end
+
     def close
+      @closed = true
       LibZMQ.msg_close(address)
     end
 

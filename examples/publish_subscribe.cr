@@ -1,4 +1,6 @@
 require "../src/zeromq"
+require "signal"
+
 link = "tcp://127.0.0.1:5555"
 
 begin
@@ -16,6 +18,11 @@ s1.set_socket_option(ZMQ::LINGER, 100)
 s2.set_socket_option(ZMQ::SUBSCRIBE, "")        # receive all
 s3.set_socket_option(ZMQ::SUBSCRIBE, "animals") # receive any starting with this string
 s4.set_socket_option(ZMQ::SUBSCRIBE, "animals.dog")
+
+Signal::INT.trap do
+  [s1, s2, s3, s4].each { |socket| socket.close }
+  ctx.terminate
+end
 
 s1.bind(link)
 s2.connect(link)
@@ -48,8 +55,8 @@ identity = s3.receive_string if s3.more_parts?
 puts "s3 received topic [#{topic}], body [#{body}], identity [#{identity}]"
 
 topic, body, identity = s4.receive_strings
-
 puts "s4 received topic [#{topic}], body [#{body}], identity [#{identity}]"
+
 
 [s1, s2, s3, s4].each do |socket|
   socket.close

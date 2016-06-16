@@ -30,28 +30,25 @@ class ZMQ::Socket(T)
   end
 
   def send_message(message : Message, flags = 0)
-    rc = LibZMQ.sendmsg(@socket, message.address, flags)
-    message.close
+    rc = LibZMQ.msg_send(message.address, @socket, flags) # NOTE: 0mq docs state that msg_send do not require message.close
     Util.resultcode_ok?(rc)
   end
 
   def send_messages(messages : Array(Message), flags = 0)
-    return false if !messages || messages.empty?
+    res = false
+    return res if !messages || messages.empty?
     flags = DONTWAIT if dontwait?(flags)
-    rc = false
 
     messages[0..-2].each do |message|
-      rc = send_message(message, (flags | ZMQ::SNDMORE))
-      break unless rc # Util.resultcode_ok?(rc)
+      return false unless (res = send_message(message, (flags | ZMQ::SNDMORE)))
     end
 
-    rc ? send_message(messages[-1], flags) : rc
+    send_message(messages[-1], flags) # NOTE: according to 0mq docs last call should be the default
   end
 
   def receive_message(flags = 0)
     message = T.new
-    LibZMQ.recvmsg(@socket, message.address, flags)
-
+    rc = LibZMQ.msg_recv(message.address, @socket, flags)
     message
   end
 
@@ -66,25 +63,19 @@ class ZMQ::Socket(T)
   def receive_messages(flags = 0)
     messages = [] of Message
 
-    message = T.new
-    rc = LibZMQ.recvmsg(@socket, message.address, flags)
-
-    if Util.resultcode_ok?(rc)
-      messages << message
-      while Util.resultcode_ok?(rc) && more_parts?
-        message = receive_message(flags)
-
-        if Util.resultcode_ok?(rc)
-          messages << message
-        else
-          message.close
-          messages.map(&.close)
-          messages.clear
-        end
+    loop do
+      message = T.new
+      rc = LibZMQ.msg_recv(message.address, @socket, flags)
+      if (msg_status = Util.resultcode_ok?(rc))
+        messages << message
+        return messages unless more_parts?
+      else
+        message.close
+        messages.map(&.close)
+        messages.clear
       end
-    else
-      message.close
     end
+
     messages
   end
 
@@ -184,7 +175,7 @@ class ZMQ::Socket(T)
   end
 
   def close
-    @close = true
+    @closed = true
     LibZMQ.close @socket
   end
 end
