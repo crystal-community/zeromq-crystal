@@ -131,13 +131,13 @@ module ZMQ
   POLLERR = 4
 
   #  Socket errors
-  EAGAIN = Errno::EAGAIN::Errno
-  EINVAL = Errno::EINVAL::Errno
-  ENOMEM = Errno::ENOMEM::Errno
-  ENODEV = Errno::ENODEV::Errno
-  EFAULT = Errno::EFAULT::Errno
-  EINTR  = Errno::EINTR::Errno
-  EMFILE = Errno::EMFILE::Errno
+  EAGAIN = Errno::EAGAIN # ::Errno rescue 11
+  EINVAL = Errno::EINVAL # ::Errno rescue 22
+  ENOMEM = Errno::ENOMEM # ::Errno rescue 12
+  ENODEV = Errno::ENODEV # ::Errno rescue 19
+  EFAULT = Errno::EFAULT # ::Errno rescue 14
+  EINTR  = Errno::EINTR  # ::Errno  rescue 4
+  EMFILE = Errno::EMFILE # ::Errno rescue 24
 
   # ZMQ errors
   HAUSNUMERO     = 156384712
@@ -149,24 +149,24 @@ module ZMQ
   # Rescue unknown constants and use the ZeroMQ defined values
   # Usually only happens on Windows though some don't resolve on
   # OSX too (ENOTSUP)
-  ENOTSUP         = Errno::ENOTSUP::Errno rescue (HAUSNUMERO + 1)
-  EPROTONOSUPPORT = Errno::EPROTONOSUPPORT::Errno rescue (HAUSNUMERO + 2)
-  ENOBUFS         = Errno::ENOBUFS::Errno rescue (HAUSNUMERO + 3)
-  ENETDOWN        = Errno::ENETDOWN::Errno rescue (HAUSNUMERO + 4)
-  EADDRINUSE      = Errno::EADDRINUSE::Errno rescue (HAUSNUMERO + 5)
-  EADDRNOTAVAIL   = Errno::EADDRNOTAVAIL::Errno rescue (HAUSNUMERO + 6)
-  ECONNREFUSED    = Errno::ECONNREFUSED::Errno rescue (HAUSNUMERO + 7)
-  EINPROGRESS     = Errno::EINPROGRESS::Errno rescue (HAUSNUMERO + 8)
-  ENOTSOCK        = Errno::ENOTSOCK::Errno rescue (HAUSNUMERO + 9)
-  EMSGSIZE        = Errno::EMSGSIZE::Errno rescue (HAUSNUMERO + 10)
-  EAFNOSUPPORT    = Errno::EAFNOSUPPORT::Errno rescue (HAUSNUMERO + 11)
-  ENETUNREACH     = Errno::ENETUNREACH::Errno rescue (HAUSNUMERO + 12)
-  ECONNABORTED    = Errno::ECONNABORTED::Errno rescue (HAUSNUMERO + 13)
-  ECONNRESET      = Errno::ECONNRESET::Errno rescue (HAUSNUMERO + 14)
-  ENOTCONN        = Errno::ENOTCONN::Errno rescue (HAUSNUMERO + 15)
-  ETIMEDOUT       = Errno::ETIMEDOUT::Errno rescue (HAUSNUMERO + 16)
-  EHOSTUNREACH    = Errno::EHOSTUNREACH::Errno rescue (HAUSNUMERO + 17)
-  ENETRESET       = Errno::ENETRESET::Errno rescue (HAUSNUMERO + 18)
+  ENOTSUP         = Errno::ENOTSUP          # ::Errno rescue (HAUSNUMERO + 1)
+  EPROTONOSUPPORT = Errno::EPROTONOSUPPORT  # ::Errno rescue (HAUSNUMERO + 2)
+  ENOBUFS         = Errno::ENOBUFS          # ::Errno rescue (HAUSNUMERO + 3)
+  ENETDOWN        = Errno::ENETDOWN         # ::Errno rescue (HAUSNUMERO + 4)
+  EADDRINUSE      = Errno::EADDRINUSE       # ::Errno rescue (HAUSNUMERO + 5)
+  EADDRNOTAVAIL   = Errno::EADDRNOTAVAIL    # ::Errno rescue (HAUSNUMERO + 6)
+  ECONNREFUSED    = Errno::ECONNREFUSED     # ::Errno rescue (HAUSNUMERO + 7)
+  EINPROGRESS     = Errno::EINPROGRESS      # ::Errno rescue (HAUSNUMERO + 8)
+  ENOTSOCK        = Errno::ENOTSOCK         # ::Errno rescue (HAUSNUMERO + 9)
+  EMSGSIZE        = Errno::EMSGSIZE         # ::Errno rescue (HAUSNUMERO + 10)
+  EAFNOSUPPORT    = Errno::EAFNOSUPPORT     # ::Errno rescue (HAUSNUMERO + 11)
+  ENETUNREACH     = Errno::ENETUNREACH      # ::Errno rescue (HAUSNUMERO + 12)
+  ECONNABORTED    = Errno::ECONNABORTED     # ::Errno rescue (HAUSNUMERO + 13)
+  ECONNRESET      = Errno::ECONNRESET       # ::Errno rescue (HAUSNUMERO + 14)
+  ENOTCONN        = Errno::ENOTCONN         # ::Errno rescue (HAUSNUMERO + 15)
+  ETIMEDOUT       = Errno::ETIMEDOUT        # ::Errno rescue (HAUSNUMERO + 16)
+  EHOSTUNREACH    = Errno::EHOSTUNREACH     # ::Errno rescue (HAUSNUMERO + 17)
+  ENETRESET       = Errno::ENETRESET        # ::Errno rescue (HAUSNUMERO + 18)
 
   #  Device Types
   STREAMER  = 1

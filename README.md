@@ -44,7 +44,7 @@ puts client.receive_string
 
 ## TODO
 
-- [ ] Add tests
+- [ ] Add more tests
 - [ ] Add more examples
 
 ## Contributing
@@ -58,3 +58,4 @@ puts client.receive_string
 ## Contributors
 
 - [Benoist](https://github.com/benoist) Benoist Claassen - creator, maintainer
+- [Hristo Kochev](https://github.com/k-solutions) Hristo Kochev

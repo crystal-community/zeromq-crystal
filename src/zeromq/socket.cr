@@ -35,12 +35,11 @@ class ZMQ::Socket(T)
   end
 
   def send_messages(messages : Array(Message), flags = 0)
-    res = false
-    return res if !messages || messages.empty?
+    return false if !messages || messages.empty?
     flags = DONTWAIT if dontwait?(flags)
 
     messages[0..-2].each do |message|
-      return false unless (res = send_message(message, (flags | ZMQ::SNDMORE)))
+      return false unless send_message(message, (flags | ZMQ::SNDMORE))
     end
 
     send_message(messages[-1], flags) # NOTE: according to 0mq docs last call should be the default
@@ -48,7 +47,7 @@ class ZMQ::Socket(T)
 
   def receive_message(flags = 0)
     message = T.new
-    rc = LibZMQ.msg_recv(message.address, @socket, flags)
+    LibZMQ.msg_recv(message.address, @socket, flags)
     message
   end
 
@@ -66,17 +65,16 @@ class ZMQ::Socket(T)
     loop do
       message = T.new
       rc = LibZMQ.msg_recv(message.address, @socket, flags)
-      if (msg_status = Util.resultcode_ok?(rc))
+      if Util.resultcode_ok?(rc)
         messages << message
+
         return messages unless more_parts?
       else
         message.close
         messages.map(&.close)
-        messages.clear
+        return messages.clear
       end
     end
-
-    messages
   end
 
   def set_socket_option(name, value)

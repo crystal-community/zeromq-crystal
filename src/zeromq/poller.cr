@@ -46,7 +46,7 @@ class ZMQ::Poller
     @writables
   end
 
-  def register(socket, type = POLLIN | POLLOUT)
+  def register(socket : Socket, type = POLLIN | POLLOUT)
     @poll_items << {socket, type}
   end
 
