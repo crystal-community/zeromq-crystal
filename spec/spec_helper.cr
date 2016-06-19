@@ -10,6 +10,17 @@ module APIHelper
     ping.send_string string
     pong.receive_string
   end
+  
+  def with_pair_sockets(first_socket_type = ZMQ::PUSH, last_socket_type = ZMQ::PULL)
+    ctx   = ZMQ::Context.new
+    first = ctx.socket first_socket_type
+    last  = ctx.socket last_socket_type
+
+    yield first, last
+
+    [first, last].each { |sock| sock.close }
+    ctx.terminate
+  end
 
   def with_router_dealer(endpoint =  "inproc://nonblocking_test", router_type = ZMQ::ROUTER, dealer_type = ZMQ::DEALER)
     with_pair_sockets(first_socket_type: router_type, last_socket_type: dealer_type) do |router, dealer|
@@ -81,9 +92,6 @@ module APIHelper
     HELPER_POLLER.register(socket, ZMQ::POLLIN)
   end
 
-  def poller_deregister_socket(socket)
-  end
-
   def poll_delivery
     # timeout after 1 second
     HELPER_POLLER.poll(1000)
@@ -130,16 +138,5 @@ module APIHelper
 
   def assert_ok(rc)
     raise "Failed with rc [#{rc}] and errno [#{ZMQ::Util.errno}], msg [#{ZMQ::Util.error_string}]! #{caller(0)}" unless rc >= 0
-  end
-
-  def with_pair_sockets(first_socket_type = ZMQ::PUSH, last_socket_type = ZMQ::PUL)
-    ctx   = ZMQ::Context.new
-    first = ctx.socket first_socket_type
-    last  = ctx.socket last_socket_type
-
-    yield first, last
-
-    [first, last].each { |sock| sock.close }
-    ctx.terminate
   end
 end

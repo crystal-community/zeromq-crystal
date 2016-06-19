@@ -5,6 +5,7 @@ describe ZMQ::Context do
     it "should init with  IO thread and Max sockets" do
       ctx = ZMQ::Context.new(2, 3)
       ctx.io_threads.should eq(2)
+      ctx.terminate
     end
 
     it "should raise a ContextError exception for negative io threads" do
@@ -14,7 +15,9 @@ describe ZMQ::Context do
     end
 
     it "should default to requesting 1 i/o thread when no argument is passed" do
-      ZMQ::Context.new.io_threads.should eq(1)
+      ctx = ZMQ::Context.new
+      ctx.io_threads.should eq(1)
+      ctx.terminate
     end
 
     it "should set the :pointer accessor to non-nil" do

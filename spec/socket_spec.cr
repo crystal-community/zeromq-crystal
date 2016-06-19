@@ -53,7 +53,7 @@ describe ZMQ::Socket do
     end
   end
 
-  context "push-pull" do
+  context "PUSH-PULL" do
     it "should receive an exact copy of the sent string directly on one pull socket" do
       APIHelper.with_push_pull do |ctx, push, pull|
         string = "boogi-boogi"
@@ -109,7 +109,7 @@ describe ZMQ::Socket do
     end
   end
 
-  context "req-rep" do
+  context "REQ-REP" do
     it "should receive an exact string copy of the string message sent" do
       APIHelper.with_req_rep do |ctx, ping, pong|
         APIHelper.send_ping(ping, pong, STRING).should eq(STRING)
