@@ -11,38 +11,18 @@ module APIHelper
     pong.receive_string
   end
 
-  def with_req_rep(endpoint = "inproc://reqrep_test", req_type = ZMQ::REQ, rep_type = ZMQ::REP)
-    ctx  = ZMQ::Context.new
-
-    req = ctx.socket req_type
-    rep = ctx.socket rep_type
-
-    req.identity = "req"
-    rep.identity = "rep"
-
-    rep.bind(endpoint)
-    connect_to_inproc(req, endpoint)
-
-    yield ctx, req, rep, endpoint
-
-    [req, rep].each { |sock| sock.close }
-    ctx.terminate
+  def with_pair_sockets(first_socket_type = ZMQ::PUSH, last_socket_type = ZMQ::PULL)
+    with_context_and_sockets(first_socket_type, last_socket_type) { |ctx, first, last| yield first, last }
   end
 
-  def with_push_pull(link = "inproc://push_pull_test")
-    string = "boogi-boogi"
-    msg = ZMQ::Message.new string
+  def with_context_and_sockets(first_socket_type = ZMQ::PUSH, last_socket_type = ZMQ::PULL)
+    ctx   = ZMQ::Context.new
+    first = ctx.socket first_socket_type
+    last  = ctx.socket last_socket_type
 
-    ctx = ZMQ::Context.new
-    push = ctx.socket ZMQ::PUSH
-    pull = ctx.socket ZMQ::PULL
+    yield ctx, first, last
 
-    push.bind link
-    connect_to_inproc pull, link
-
-    yield ctx, push, pull, link
-
-    [push, pull].each { |sock| sock.close }
+    [first, last].each { |sock| sock.close }
     ctx.terminate
   end
 
@@ -57,12 +37,9 @@ module APIHelper
     HELPER_POLLER.register(socket, ZMQ::POLLIN)
   end
 
-  def poller_deregister_socket(socket)
-  end
-
   def poll_delivery
     # timeout after 1 second
-    HELPER_POLLER.poll(1000)
+    HELPER_POLLER.poll(100)
   end
 
   def poll_it_for_read(socket : ZMQ::Socket, &blk)

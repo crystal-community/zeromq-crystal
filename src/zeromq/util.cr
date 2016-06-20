@@ -1,5 +1,7 @@
-class ZMQ::Util
-  def self.curve_keypair
+module ZMQ::Util
+  extend self
+
+  def curve_keypair
     public_key = FFI::MemoryPointer.from_string(" " * 41)
     private_key = FFI::MemoryPointer.from_string(" " * 41)
     rc = LibZMQ.curve_keypair public_key, private_key
@@ -18,27 +20,27 @@ class ZMQ::Util
   # that had a read or write event triggered. So, a >= 0 result means
   # it succeeded.
   #
-  def self.resultcode_ok?(rc)
+  def resultcode_ok?(rc)
     rc >= 0
   end
 
   # Returns the +errno+ as set by the libzmq library.
   #
-  def self.errno
+  def errno
     LibZMQ.errno
   end
 
   # Returns a string corresponding to the currently set #errno. These
   # error strings are defined by libzmq.
   #
-  def self.error_string
+  def error_string
     String.new(LibZMQ.strerror(errno))
   end
 
   # Attempts to bind to a random tcp port on +host+ up to +max_tries+
   # times. Returns the port number upon success or nil upon failure.
   #
-  def self.bind_to_random_tcp_port(host = "127.0.0.1", max_tries = 500)
+  def bind_to_random_tcp_port(host = "127.0.0.1", max_tries = 500)
     tries = 0
     rc = -1
 
@@ -58,7 +60,7 @@ class ZMQ::Util
   # When no error is found, this method returns +true+ which is behavior
   # used internally by #send and #recv.
   #
-  def self.error_check(source, result_code)
+  def error_check(source, result_code)
     if -1 == result_code
       raise_error source, result_code
     end
@@ -68,11 +70,11 @@ class ZMQ::Util
   end
 
   # generate a random port between 10_000 and 65534
-  private def self.random_port
+  private def random_port
     rand(55534) + 10_000
   end
 
-  private def self.raise_error(source, result_code)
+  private def raise_error(source, result_code)
     if context_error?(source)
       raise ContextError.new source, result_code, ZMQ::Util.errno, ZMQ::Util.error_string
     elsif message_error?(source)
@@ -83,19 +85,19 @@ class ZMQ::Util
     end
   end
 
-  private def self.eagain?
+  private def eagain?
     EAGAIN == ZMQ::Util.errno
   end
 
-  private def self.context_error?(source)
-    "zmq_ctx_new" == source ||
+  private def context_error?(source)
+      "zmq_ctx_new" == source ||
       "zmq_ctx_set" == source ||
       "zmq_ctx_get" == source ||
       "zmq_ctx_destory" == source ||
       "zmq_ctx_set_monitor" == source
   end
 
-  def self.message_error?(source)
+  def message_error?(source)
     ["zmq_msg_init", "zmq_msg_init_data", "zmq_msg_copy", "zmq_msg_move", "zmq_msg_close", "zmq_msg_get",
       "zmq_msg_more", "zmq_msg_recv", "zmq_msg_send", "zmq_msg_set"].includes?(source)
   end
