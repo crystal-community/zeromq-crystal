@@ -1,1 +1,2 @@
+before_install: sudo apt-get install libzmq3-dev
 language: crystal
