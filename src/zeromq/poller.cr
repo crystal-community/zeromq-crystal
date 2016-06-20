@@ -1,8 +1,8 @@
 class ZMQ::Poller
   def initialize
-    @poll_items = [] of {Socket(Message), Int32}
-    @readables = [] of Socket(Message)
-    @writables = [] of Socket(Message)
+    @poll_items = [] of {Socket, Int32}
+    @readables = [] of Socket
+    @writables = [] of Socket
   end
 
   def poll(timeout)

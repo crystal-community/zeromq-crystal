@@ -1,5 +1,13 @@
 module ZMQ
-  class Message
+
+  abstract class AbstractMessage
+    abstract def address
+    abstract def data
+    abstract def to_s
+    abstract def close
+  end
+
+  class Message < AbstractMessage
     getter? closed
 
     def initialize(message : String? = nil)

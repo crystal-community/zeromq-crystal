@@ -6,13 +6,13 @@ describe ZMQ::Socket do
   context "#new" do
     it "sets socket" do
       ctx = ZMQ::Context.new
-      ZMQ::Socket(ZMQ::Message).new(ZMQ::Context.new, ZMQ::REQ).socket.should_not be_nil
+      ZMQ::Socket.new(ZMQ::Context.new, ZMQ::REQ).socket.should_not be_nil
       ctx.terminate
     end
 
     it "sets the identity for less than 255 bytes" do
       ctx = ZMQ::Context.new
-      sock = ZMQ::Socket(ZMQ::Message).new(ctx, ZMQ::REQ)
+      sock = ZMQ::Socket.new(ctx, ZMQ::REQ)
 
       sock.identity = "ab"
       sock.identity.should eq("ab")
@@ -22,7 +22,7 @@ describe ZMQ::Socket do
 
     it "do not set the identity for more than 255 bytes" do
       ctx = ZMQ::Context.new
-      sock = ZMQ::Socket(ZMQ::Message).new(ctx, ZMQ::REQ)
+      sock = ZMQ::Socket.new(ctx, ZMQ::REQ)
 
       sock.identity = "ab" * 150
       sock.identity.should eq("")
@@ -30,7 +30,7 @@ describe ZMQ::Socket do
       ctx.terminate
     end
 
-    it "should convert numeric identities to strings" do
+    it "convert numeric identities to strings" do
       ctx = ZMQ::Context.new
       sock = ctx.socket(ZMQ::REQ)
       sock.identity = 7
@@ -54,7 +54,7 @@ describe ZMQ::Socket do
   end
 
   context "PUSH-PULL" do
-    it "should receive an exact copy of the sent string directly on one pull socket" do
+    it "receive an exact copy of the sent string directly on one pull socket" do
       APIHelper.with_push_pull do |ctx, push, pull|
         string = "boogi-boogi"
         push.send_string string
@@ -63,7 +63,7 @@ describe ZMQ::Socket do
       end
     end
 
-    it "should receive an exact copy of the Message data sent directly on one pull socket" do
+    it "receive an exact copy of the Message data sent directly on one pull socket" do
       APIHelper.with_push_pull do |ctx, push, pull|
         string = "boogi-boogi"
         msg = ZMQ::Message.new string
@@ -78,7 +78,7 @@ describe ZMQ::Socket do
       APIHelper.with_push_pull do |ctx, push, pull, link|
         string = "boogi-boogi"
         received = [] of String
-        sockets = [] of ZMQ::Socket(ZMQ::Message)
+        sockets = [] of ZMQ::Socket #(ZMQ::Message)
         count = 4
         channel = Channel(String).new
 
@@ -110,13 +110,13 @@ describe ZMQ::Socket do
   end
 
   context "REQ-REP" do
-    it "should receive an exact string copy of the string message sent" do
+    it "receive an exact string copy of the string message sent" do
       APIHelper.with_req_rep do |ctx, ping, pong|
         APIHelper.send_ping(ping, pong, STRING).should eq(STRING)
       end
     end
 
-    it "should generate a EFSM error when sending via the REQ socket twice in a row without an intervening receive operation" do
+    it "generate a EFSM error when sending via the REQ socket twice in a row without an intervening receive operation" do
       APIHelper.with_req_rep do |ctx, ping, pong|
         APIHelper.send_ping(ping, pong, STRING)
         ping.send_string(STRING).should be_false
@@ -124,14 +124,14 @@ describe ZMQ::Socket do
       end
     end
 
-    it "should receive an exact copy of the sent message using Message objects directly" do
+    it "receive an exact copy of the sent message using Message objects directly" do
       APIHelper.with_req_rep do |ctx, ping, pong|
         ping.send_message(ZMQ::Message.new(STRING)).should be_true
         pong.receive_message.to_s.should eq(STRING)
       end
     end
 
-    it "should receive an exact copy of the sent message using Message objects directly in non-blocking mode" do
+    it "receive an exact copy of the sent message using Message objects directly in non-blocking mode" do
       APIHelper.with_req_rep do |ctx, ping, pong|
         sent_message = ZMQ::Message.new STRING
 

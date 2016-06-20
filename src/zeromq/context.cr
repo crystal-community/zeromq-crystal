@@ -26,7 +26,7 @@ class ZMQ::Context
   end
 
   def socket(type)
-    Socket(Message).new self, type
+    Socket.new self, type
   end
 
   def pointer

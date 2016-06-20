@@ -1,179 +1,181 @@
-class ZMQ::Socket(T)
-  getter socket
-  getter name : String
-  getter? closed
+module ZMQ
+  class Socket # T
+    getter socket
+    getter name : String
+    getter? closed
 
-  def initialize(context : ZMQ::Context, type : Int32)
-    context_ptr = context.pointer
+    def initialize(context : Context, type : Int32, @message_type = Message)
+      context_ptr = context.pointer
 
-    if context_ptr.null?
-      raise ContextError.new "zmq_socket", 0, ETERM, "Context pointer was null"
-    else
-      @socket = LibZMQ.socket context_ptr, type
-      @closed = false
-      if @socket && !@socket.null?
-        @name = SocketTypeNameMap[type]
+      if context_ptr.null?
+        raise ContextError.new "zmq_socket", 0, ETERM, "Context pointer was null"
       else
-        raise ContextError.new "zmq_socket", 0, ETERM, "Socket pointer was null"
+        @socket = LibZMQ.socket context_ptr, type
+        @closed = false
+        if @socket && !@socket.null?
+          @name = SocketTypeNameMap[type]
+        else
+          raise ContextError.new "zmq_socket", 0, ETERM, "Socket pointer was null"
+        end
       end
     end
-  end
 
-  def send_string(string, flags = 0)
-    part = Message.new(string)
-    send_message(part, flags)
-  end
-
-  def send_strings(strings : Array(String), flags = 0)
-    parts = strings.map { |string| Message.new(string) }
-    send_messages(parts, flags)
-  end
-
-  def send_message(message : Message, flags = 0)
-    rc = LibZMQ.msg_send(message.address, @socket, flags) # NOTE: 0mq docs state that msg_send do not require message.close
-    Util.resultcode_ok?(rc)
-  end
-
-  def send_messages(messages : Array(Message), flags = 0)
-    return false if !messages || messages.empty?
-    flags = DONTWAIT if dontwait?(flags)
-
-    messages[0..-2].each do |message|
-      return false unless send_message(message, (flags | ZMQ::SNDMORE))
+    def send_string(string, flags = 0)
+      part = @message_type.new(string)
+      send_message(part, flags)
     end
 
-    send_message(messages[-1], flags) # NOTE: according to 0mq docs last call should be the default
-  end
+    def send_strings(strings : Array(String), flags = 0)
+      parts = strings.map { |string| @message_type.new(string) }
+      send_messages(parts, flags)
+    end
 
-  def receive_message(flags = 0)
-    message = T.new
-    LibZMQ.msg_recv(message.address, @socket, flags)
-    message
-  end
+    def send_message(message : AbstractMessage, flags = 0)
+      rc = LibZMQ.msg_send(message.address, @socket, flags) # NOTE: 0mq docs state that msg_send do not require message.close
+      Util.resultcode_ok?(rc)
+    end
 
-  def receive_string(flags = 0)
-    receive_message(flags).to_s
-  end
+    def send_messages(messages : Array(AbstractMessage), flags = 0)
+      return false if !messages || messages.empty?
+      flags = DONTWAIT if dontwait?(flags)
 
-  def receive_strings(flags = 0)
-    receive_messages.map(&.to_s)
-  end
+      messages[0..-2].each do |message|
+        return false unless send_message(message, (flags | ZMQ::SNDMORE))
+      end
 
-  def receive_messages(flags = 0)
-    messages = [] of Message
+      send_message(messages[-1], flags) # NOTE: according to 0mq docs last call should be the default
+    end
 
-    loop do
-      message = T.new
-      rc = LibZMQ.msg_recv(message.address, @socket, flags)
-      if Util.resultcode_ok?(rc)
-        messages << message
+    def receive_message(flags = 0) : AbstractMessage
+      message = @message_type.new
+      LibZMQ.msg_recv(message.address, @socket, flags)
+      message
+    end
 
-        return messages unless more_parts?
-      else
-        message.close
-        messages.map(&.close)
-        return messages.clear
+    def receive_string(flags = 0)
+      receive_message(flags).to_s
+    end
+
+    def receive_strings(flags = 0)
+      receive_messages.map(&.to_s)
+    end
+
+    def receive_messages(flags = 0)
+      messages = [] of AbstractMessage
+
+      loop do
+        message = @message_type.new
+        rc = LibZMQ.msg_recv(message.address, @socket, flags)
+        if Util.resultcode_ok?(rc)
+          messages << message
+
+          return messages unless more_parts?
+        else
+          message.close
+          messages.map(&.close)
+          return messages.clear
+        end
       end
     end
-  end
 
-  def set_socket_option(name, value)
-    rc = case
-         when INT32_SOCKET_OPTIONS.includes?(name) && value.is_a?(Number)
-           value = value.to_i
-           LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int32)
-         when INT32_SOCKET_OPTIONS_V4.includes?(name) && value.is_a?(Number)
-           value = value.to_i
-           LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int32)
-         when INT64_SOCKET_OPTIONS.includes?(name) && value.is_a?(Number)
-           value = value.to_i64
-           LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int64)
-         when STRING_SOCKET_OPTIONS.includes?(name) && value.is_a?(String)
-           LibZMQ.setsockopt @socket, name, value.to_unsafe.as(Void*), value.size
-         when STRING_SOCKET_OPTIONS_V4.includes?(name) && value.is_a?(String)
-           LibZMQ.setsockopt @socket, name, value.to_unsafe.as(Void*), value.size
-         else
-           raise "Invalid socket option"
-         end
+    def set_socket_option(name, value)
+      rc = case
+           when INT32_SOCKET_OPTIONS.includes?(name) && value.is_a?(Number)
+             value = value.to_i
+             LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int32)
+           when INT32_SOCKET_OPTIONS_V4.includes?(name) && value.is_a?(Number)
+             value = value.to_i
+             LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int32)
+           when INT64_SOCKET_OPTIONS.includes?(name) && value.is_a?(Number)
+             value = value.to_i64
+             LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int64)
+           when STRING_SOCKET_OPTIONS.includes?(name) && value.is_a?(String)
+             LibZMQ.setsockopt @socket, name, value.to_unsafe.as(Void*), value.size
+           when STRING_SOCKET_OPTIONS_V4.includes?(name) && value.is_a?(String)
+             LibZMQ.setsockopt @socket, name, value.to_unsafe.as(Void*), value.size
+           else
+             raise "Invalid socket option"
+           end
 
-    Util.resultcode_ok?(rc)
-  end
+      Util.resultcode_ok?(rc)
+    end
 
-  def get_socket_option(name)
-    value32 = uninitialized Int32
-    value64 = uninitialized Int64
-    string_value = uninitialized UInt8[255]
-    value = case
-            when INT32_SOCKET_OPTIONS.includes?(name)
-              size = LibC::SizeT.new(4)
-              rc = LibZMQ.getsockopt(@socket, name, pointerof(value32).as(Void*), pointerof(size))
-              value32
-            when INT32_SOCKET_OPTIONS_V4.includes?(name)
-              size = LibC::SizeT.new(4)
-              rc = LibZMQ.getsockopt(@socket, name, pointerof(value32).as(Void*), pointerof(size))
-              value32
-            when INT64_SOCKET_OPTIONS.includes?(name)
-              size = LibC::SizeT.new(8)
-              rc = LibZMQ.getsockopt(@socket, name, pointerof(value64).as(Void*), pointerof(size))
-              value64
-            when STRING_SOCKET_OPTIONS.includes?(name)
-              size = LibC::SizeT.new(255)
-              rc = LibZMQ.getsockopt(@socket, name, pointerof(string_value).as(Void*), pointerof(size))
-              String.new(string_value.to_unsafe, size)
-            when STRING_SOCKET_OPTIONS_V4.includes?(name)
-              size = LibC::SizeT.new(255)
-              rc = LibZMQ.getsockopt(@socket, name, pointerof(string_value).as(Void*), pointerof(size))
-              string_value
-            else
-              raise "Invalid socket option"
-            end
+    def get_socket_option(name)
+      value32 = uninitialized Int32
+      value64 = uninitialized Int64
+      string_value = uninitialized UInt8[255]
+      value = case
+              when INT32_SOCKET_OPTIONS.includes?(name)
+                size = LibC::SizeT.new(4)
+                rc = LibZMQ.getsockopt(@socket, name, pointerof(value32).as(Void*), pointerof(size))
+                value32
+              when INT32_SOCKET_OPTIONS_V4.includes?(name)
+                size = LibC::SizeT.new(4)
+                rc = LibZMQ.getsockopt(@socket, name, pointerof(value32).as(Void*), pointerof(size))
+                value32
+              when INT64_SOCKET_OPTIONS.includes?(name)
+                size = LibC::SizeT.new(8)
+                rc = LibZMQ.getsockopt(@socket, name, pointerof(value64).as(Void*), pointerof(size))
+                value64
+              when STRING_SOCKET_OPTIONS.includes?(name)
+                size = LibC::SizeT.new(255)
+                rc = LibZMQ.getsockopt(@socket, name, pointerof(string_value).as(Void*), pointerof(size))
+                String.new(string_value.to_unsafe, size)
+              when STRING_SOCKET_OPTIONS_V4.includes?(name)
+                size = LibC::SizeT.new(255)
+                rc = LibZMQ.getsockopt(@socket, name, pointerof(string_value).as(Void*), pointerof(size))
+                string_value
+              else
+                raise "Invalid socket option"
+              end
 
-    raise "Socket option failed" unless Util.resultcode_ok?(rc)
-    value
-  end
+      raise "Socket option failed" unless Util.resultcode_ok?(rc)
+      value
+    end
 
-  def identity
-    get_socket_option(IDENTITY).to_s
-  end
+    def identity
+      get_socket_option(IDENTITY).to_s
+    end
 
-  def identity=(value)
-    set_socket_option(IDENTITY, value.to_s)
-  end
+    def identity=(value)
+      set_socket_option(IDENTITY, value.to_s)
+    end
 
-  def more_parts?
-    get_socket_option(RCVMORE).as(Int64) > 0
-  end
+    def more_parts?
+      get_socket_option(RCVMORE).as(Int64) > 0
+    end
 
-  def dontwait?(flags)
-    (DONTWAIT & flags) == DONTWAIT
-  end
+    def dontwait?(flags)
+      (DONTWAIT & flags) == DONTWAIT
+    end
 
-  def bind(address)
-    Util.resultcode_ok? LibZMQ.bind @socket, address
-  end
+    def bind(address)
+      Util.resultcode_ok? LibZMQ.bind @socket, address
+    end
 
-  def unbind(address)
-    Util.resultcode_ok? LibZMQ.unbind @socket, address
-  end
+    def unbind(address)
+      Util.resultcode_ok? LibZMQ.unbind @socket, address
+    end
 
-  def connect(address)
-    Util.resultcode_ok? LibZMQ.connect @socket, address
-  end
+    def connect(address)
+      Util.resultcode_ok? LibZMQ.connect @socket, address
+    end
 
-  def disconnect(address)
-    Util.resultcode_ok? LibZMQ.disconnect @socket, address
-  end
+    def disconnect(address)
+      Util.resultcode_ok? LibZMQ.disconnect @socket, address
+    end
 
-  def address
-    @socket
-  end
+    def address
+      @socket
+    end
 
-  def finalize
-    close
-  end
+    def finalize
+      close
+    end
 
-  def close
-    @closed = true
-    LibZMQ.close @socket
+    def close
+      @closed = true
+      LibZMQ.close @socket
+    end
   end
 end
