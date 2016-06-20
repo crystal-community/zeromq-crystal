@@ -1,5 +1,5 @@
 module ZMQ
-  class Socket # T
+  class Socket
     getter socket
     getter name : String
     getter? closed

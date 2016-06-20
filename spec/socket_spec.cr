@@ -1,6 +1,7 @@
 require "./spec_helper"
 
 STRING = "boogy-boogy"
+PING_ENDPOINT = "inproc://ping_ping_test"
 
 describe ZMQ::Socket do
   context "#new" do
@@ -42,7 +43,10 @@ describe ZMQ::Socket do
 
   context "socket-options" do
     it "more_parts returns true or false" do
-      APIHelper.with_req_rep do |ctx, ping, pong|
+      APIHelper.with_pair_sockets(ZMQ::REQ, ZMQ::REP) do |ping, pong|
+        ping.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pong, PING_ENDPOINT
+
         ping.send_message(ZMQ::Message.new(STRING), ZMQ::SNDMORE).should be_true
         ping.send_message(ZMQ::Message.new(STRING)).should be_true
         pong.receive_message.to_s.should eq(STRING)
@@ -55,8 +59,14 @@ describe ZMQ::Socket do
 
   context "PUSH-PULL" do
     it "receive an exact copy of the sent string directly on one pull socket" do
-      APIHelper.with_push_pull do |ctx, push, pull|
-        string = "boogi-boogi"
+      string = "boogi-boogi"
+
+      APIHelper.with_pair_sockets(ZMQ::PUSH, ZMQ::PULL) do |push, pull|
+        push.identity = "Test-Sender"
+
+        push.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pull, PING_ENDPOINT
+
         push.send_string string
         received = pull.receive_string # received
         received.should eq(string)
@@ -64,9 +74,14 @@ describe ZMQ::Socket do
     end
 
     it "receive an exact copy of the Message data sent directly on one pull socket" do
-      APIHelper.with_push_pull do |ctx, push, pull|
-        string = "boogi-boogi"
-        msg = ZMQ::Message.new string
+      string = "boogi-boogi"
+      msg = ZMQ::Message.new string
+
+      APIHelper.with_pair_sockets(ZMQ::PUSH, ZMQ::PULL) do |push, pull|
+        push.identity = "Test-Sender"
+
+        push.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pull, PING_ENDPOINT
 
         push.send_message msg
         received = pull.receive_message # received
@@ -75,18 +90,22 @@ describe ZMQ::Socket do
     end
 
     it "receive a message for each message sent on socket listening with an equal number of sockets pulls messages and is unique per thread" do
-      APIHelper.with_push_pull do |ctx, push, pull, link|
-        string = "boogi-boogi"
-        received = [] of String
-        sockets = [] of ZMQ::Socket #(ZMQ::Message)
-        count = 4
-        channel = Channel(String).new
+      string = "boogi-boogi"
+      received = [] of String
+      sockets = [] of ZMQ::Socket
+      count = 4
+      channel = Channel(String).new
 
-        # make sure all sockets are connected before we do our load-balancing test
+      APIHelper.with_context_and_sockets(ZMQ::PUSH, ZMQ::PULL) do |ctx, push, pull|
+        push.identity = "Test-Sender"
+
+        push.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pull, PING_ENDPOINT
+        # NOTE: make sure all sockets are connected before we do our load-balancing test
         (count - 1).times do
           socket = ctx.socket ZMQ::PULL
           socket.set_socket_option ZMQ::LINGER, 0
-          APIHelper.connect_to_inproc(socket, link)
+          APIHelper.connect_to_inproc(socket, PING_ENDPOINT)
           sockets << socket
         end
         sockets << pull
@@ -111,13 +130,19 @@ describe ZMQ::Socket do
 
   context "REQ-REP" do
     it "receive an exact string copy of the string message sent" do
-      APIHelper.with_req_rep do |ctx, ping, pong|
+      APIHelper.with_pair_sockets(ZMQ::REQ, ZMQ::REP) do |ping, pong|
+        ping.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pong, PING_ENDPOINT
+
         APIHelper.send_ping(ping, pong, STRING).should eq(STRING)
       end
     end
 
     it "generate a EFSM error when sending via the REQ socket twice in a row without an intervening receive operation" do
-      APIHelper.with_req_rep do |ctx, ping, pong|
+      APIHelper.with_pair_sockets(ZMQ::REQ, ZMQ::REP) do |ping, pong|
+        ping.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pong, PING_ENDPOINT
+
         APIHelper.send_ping(ping, pong, STRING)
         ping.send_string(STRING).should be_false
         ZMQ::Util.errno.should eq(ZMQ::EFSM)
@@ -125,15 +150,21 @@ describe ZMQ::Socket do
     end
 
     it "receive an exact copy of the sent message using Message objects directly" do
-      APIHelper.with_req_rep do |ctx, ping, pong|
+      APIHelper.with_pair_sockets(ZMQ::REQ, ZMQ::REP) do |ping, pong|
+        ping.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pong, PING_ENDPOINT
+
         ping.send_message(ZMQ::Message.new(STRING)).should be_true
         pong.receive_message.to_s.should eq(STRING)
       end
     end
 
     it "receive an exact copy of the sent message using Message objects directly in non-blocking mode" do
-      APIHelper.with_req_rep do |ctx, ping, pong|
-        sent_message = ZMQ::Message.new STRING
+      sent_message = ZMQ::Message.new STRING
+
+      APIHelper.with_pair_sockets(ZMQ::REQ, ZMQ::REP) do |ping, pong|
+        ping.bind PING_ENDPOINT
+        APIHelper.connect_to_inproc pong, PING_ENDPOINT
 
         APIHelper.poll_it_for_read(pong) do
           ping.send_message(sent_message, ZMQ::DONTWAIT).should be_true
