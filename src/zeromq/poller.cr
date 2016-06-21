@@ -1,4 +1,6 @@
 class ZMQ::Poller
+  getter poll_items
+
   def initialize
     @poll_items = [] of {Socket, Int32}
     @readables = [] of Socket
