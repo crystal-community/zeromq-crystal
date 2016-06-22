@@ -34,5 +34,24 @@ describe ZMQ::Context do
     it "return nil for negative io threads" do
       ZMQ::Context.create(-1).should eq(nil)
     end
+
+    context "with block" do
+      it "creates a context" do
+        ZMQ::Context.create do |ctx|
+          ctx.should be_a(ZMQ::Context)
+        end
+      end
+
+      it "creates a context and sockets" do
+        ZMQ::Context.create(ZMQ::PUSH, ZMQ::PULL) do |ctx, sockets|
+          ctx.should  be_a(ZMQ::Context)
+          push, pull = sockets
+          push.should be_a(ZMQ::Socket)
+          pull.should be_a(ZMQ::Socket)
+          sockets.size.should eq(2)
+          sockets.each { |socket| socket.should be_a(ZMQ::Socket) }
+        end
+      end
+    end
   end
 end

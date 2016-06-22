@@ -16,14 +16,9 @@ module APIHelper
   end
 
   def with_context_and_sockets(first_socket_type = ZMQ::PUSH, last_socket_type = ZMQ::PULL)
-    ctx   = ZMQ::Context.new
-    first = ctx.socket first_socket_type
-    last  = ctx.socket last_socket_type
-
-    yield ctx, first, last
-
-    [first, last].each { |sock| sock.close }
-    ctx.terminate
+    ZMQ::Context.create first_socket_type, last_socket_type do |ctx, (first, last)|
+      yield ctx, first, last
+    end
   end
 
   def connect_to_inproc(socket : ZMQ::Socket, endpoint : String, timeout = 3)
