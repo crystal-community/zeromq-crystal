@@ -1,6 +1,27 @@
 require "./spec_helper"
 
 describe ZMQ::Context do
+  context "#socket" do
+    it "create new socket in the given context" do
+      ZMQ::Context.create do |ctx|
+        sock = ctx.socket(ZMQ::REQ)
+        sock.should be_a ZMQ::Socket
+        sock.name.should eq("REQ")
+        sock.close
+      end
+    end
+
+    context "with block" do
+      it "creates a socket for a context" do
+        ZMQ::Context.create do |ctx|
+          ctx.socket ZMQ::REQ do |sock|
+            sock.should be_a(ZMQ::Socket)
+          end
+        end
+      end
+    end
+  end
+
   context "#new" do
     it "init with  IO thread and Max sockets" do
       ctx = ZMQ::Context.new(2, 3)
@@ -31,8 +52,8 @@ describe ZMQ::Context do
   end
 
   context "#create" do
-    it "return nil for negative io threads" do
-      ZMQ::Context.create(-1).should eq(nil)
+    it "return self" do
+      ZMQ::Context.create.should be_a ZMQ::Context
     end
 
     context "with block" do

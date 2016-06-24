@@ -21,8 +21,8 @@ end
 s1.set_socket_option(ZMQ::LINGER, 100)
 s2.set_socket_option(ZMQ::LINGER, 100)
 
-s2.bind(link) || puts "binding failed #{link}"
-s1.connect(link) || puts "connect failed"
+s2.bind(link)     || puts "binding failed #{link}"
+s1.connect(link)  || puts "connect failed"
 
 poller = ZMQ::Poller.new
 poller.register_readable(s2)

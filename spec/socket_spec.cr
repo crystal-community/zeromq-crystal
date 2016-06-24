@@ -4,11 +4,33 @@ STRING = "boogy-boogy"
 PING_ENDPOINT = "inproc://ping_ping_test"
 
 describe ZMQ::Socket do
+  context ".create" do
+    it "sets a socket" do
+      ZMQ::Context.create do |ctx|
+        socket = ZMQ::Socket.create(ctx, ZMQ::REQ)
+        socket.socket.should_not be_nil
+        socket.close
+      end
+    end
+
+    context "with block" do
+      it "creates a socket for a context" do
+        ZMQ::Context.create do |ctx|
+          ZMQ::Socket.create(ctx, ZMQ::REQ) do |sock|
+            sock.should be_a(ZMQ::Socket)
+          end
+        end
+      end
+    end
+  end
+
   context "#new" do
     it "sets socket" do
-      ctx = ZMQ::Context.new
-      ZMQ::Socket.new(ZMQ::Context.new, ZMQ::REQ).socket.should_not be_nil
-      ctx.terminate
+      ZMQ::Context.create do |ctx|
+        sock = ZMQ::Socket.new(ctx, ZMQ::REQ)
+        sock.socket.should_not be_nil
+        sock.close
+      end
     end
 
     it "sets the identity for less than 255 bytes" do
