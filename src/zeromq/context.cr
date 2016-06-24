@@ -2,20 +2,22 @@ class ZMQ::Context
   getter io_threads
   getter max_sockets
 
-  def self.create(io_threads = IO_THREADS_DFLT, max_sockets = MAX_SOCKETS_DFLT)
-    new(io_threads, max_sockets) rescue nil
+  def self.create(io_threads = IO_THREADS_DFLT, max_sockets = MAX_SOCKETS_DFLT) : self
+    new(io_threads, max_sockets)
   end
 
   def self.create(*socket_types, io_threads = IO_THREADS_DFLT, max_sockets = MAX_SOCKETS_DFLT)
     return unless (ctx = new(io_threads, max_sockets))
     sockets = [] of Socket
-    # yield ctx
     sockets = socket_types.map { |socket_type| ctx.socket(socket_type) }
 
     yield ctx, sockets
 
     sockets.each(&.close)
     ctx.terminate
+  rescue e : ZMQ::ContextError
+    STDERR.puts "Failed to allocate context or socket!"
+    raise e
   end
 
   def initialize(@io_threads = IO_THREADS_DFLT, @max_sockets = MAX_SOCKETS_DFLT)
@@ -40,6 +42,14 @@ class ZMQ::Context
 
   def socket(type)
     Socket.new(self, type)
+  end
+
+  def socket(type)
+    socket_instance = Socket.new(self, type)
+
+    yield socket_instance
+
+    socket_instance.close
   end
 
   def pointer

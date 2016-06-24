@@ -37,8 +37,8 @@ module ZMQ
     end
 
     def close
+      LibZMQ.msg_close(address) unless @closed
       @closed = true
-      LibZMQ.msg_close(address)
     end
 
     def address

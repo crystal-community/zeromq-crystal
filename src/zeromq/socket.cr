@@ -4,6 +4,23 @@ module ZMQ
     getter name : String
     getter? closed
 
+    def self.create(context : Context, type : Int32, message_type = Message) : self
+      new context, type, message_type
+    rescue e : ZMQ::ContextError
+      STDERR.puts "Failed to allocate context or socket!"
+      raise e
+    end
+
+    def self.create(context : Context, type : Int32, message_type = Message)
+      socket = new context, type, message_type
+
+      yield socket
+
+      socket.close
+    rescue e : ZMQ::ContextError
+      STDERR.puts "Failed to allocate context or socket!"
+    end
+
     def initialize(context : Context, type : Int32, @message_type = Message)
       context_ptr = context.pointer
 
