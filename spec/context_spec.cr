@@ -1,12 +1,48 @@
 require "./spec_helper"
 
 describe ZMQ::Context do
+  context "#sockets" do
+    it "create new sockets in the given context" do
+      ZMQ::Context.create do |ctx|
+        req, rep = ctx.sockets(ZMQ::REQ, ZMQ::REP)
+
+        req.should be_a ZMQ::Socket
+        req.name.should eq("REQ")
+        req.socket.null?.should be_false
+
+        rep.should be_a ZMQ::Socket
+        rep.name.should eq("REP")
+        rep.socket.null?.should be_false
+
+        req.close
+        rep.close
+      end
+    end
+
+    context "with block" do
+      it "creates sockets for a context" do
+        ZMQ::Context.create do |ctx|
+          ctx.sockets ZMQ::REQ, ZMQ::REP do |req, rep|
+            req.should be_a(ZMQ::Socket)
+            req.name.should eq("REQ")
+            req.socket.null?.should be_false
+
+            rep.should be_a ZMQ::Socket
+            rep.name.should eq("REP")
+            rep.socket.null?.should be_false
+          end
+        end
+      end
+    end
+  end
+
   context "#socket" do
     it "create new socket in the given context" do
       ZMQ::Context.create do |ctx|
         sock = ctx.socket(ZMQ::REQ)
         sock.should be_a ZMQ::Socket
         sock.name.should eq("REQ")
+        sock.socket.null?.should be_false
         sock.close
       end
     end
@@ -16,6 +52,8 @@ describe ZMQ::Context do
         ZMQ::Context.create do |ctx|
           ctx.socket ZMQ::REQ do |sock|
             sock.should be_a(ZMQ::Socket)
+            sock.name.should eq("REQ")
+            sock.socket.null?.should be_false
           end
         end
       end
@@ -60,17 +98,22 @@ describe ZMQ::Context do
       it "creates a context" do
         ZMQ::Context.create do |ctx|
           ctx.should be_a(ZMQ::Context)
+          ctx.pointer.null?.should be_false
         end
       end
 
       it "creates a context and sockets" do
-        ZMQ::Context.create(ZMQ::PUSH, ZMQ::PULL) do |ctx, sockets|
+        ZMQ::Context.create(ZMQ::PUSH, ZMQ::PULL) do |ctx, (push, pull)|
           ctx.should  be_a(ZMQ::Context)
-          push, pull = sockets
+          ctx.pointer.null?.should be_false
+
           push.should be_a(ZMQ::Socket)
+          push.socket.null?.should be_false
+          push.name.should eq("PUSH")
+
           pull.should be_a(ZMQ::Socket)
-          sockets.size.should eq(2)
-          sockets.each { |socket| socket.should be_a(ZMQ::Socket) }
+          pull.socket.null?.should be_false
+          pull.name.should eq("PULL")
         end
       end
     end

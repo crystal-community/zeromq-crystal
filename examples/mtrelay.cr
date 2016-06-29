@@ -1,5 +1,9 @@
 require "../src/zeromq"
 
+STEP1 = "inproc://step1"
+STEP2 = "inproc://step2"
+
+
 def step1(context)
   # Connect to step2 and tell it we're ready
   xmitter = context.socket(ZMQ::PAIR)
@@ -19,7 +23,7 @@ def step2(context)
   # Connect to step3 and tell it we're ready
   xmitter = context.socket(ZMQ::PAIR)
   xmitter.connect("inproc://step3")
-  xmitter.send_string("READY")
+  xmitter.send_string(msg)
 end
 
 context = ZMQ::Context.new
