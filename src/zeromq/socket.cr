@@ -12,11 +12,11 @@ module ZMQ
     end
 
     def self.create(context : Context, type : Int32, message_type = Message)
-      socket = new context, type, message_type
+      sock = new context, type, message_type
 
-      yield socket
+      yield sock
 
-      socket.close
+      sock.close
     rescue e : ZMQ::ContextError
       STDERR.puts "Failed to allocate context or socket!"
     end
@@ -28,11 +28,10 @@ module ZMQ
         raise ContextError.new "zmq_socket", 0, ETERM, "Context pointer was null"
       else
         @socket = LibZMQ.socket context_ptr, type
-        @closed = false
         if @socket && !@socket.null?
-          @name = SocketTypeNameMap[type]
+          @closed, @name = false, SocketTypeNameMap[type]
         else
-          raise ContextError.new "zmq_socket", 0, ETERM, "Socket pointer was null"
+          raise ContextError.new "zmq_socket", 0, ETERM, "Socket pointer was null with: #{Util.error_string}"
         end
       end
     end
@@ -167,19 +166,19 @@ module ZMQ
     end
 
     def bind(address)
-      Util.resultcode_ok? LibZMQ.bind @socket, address
+      Util.resultcode_ok? LibZMQ.bind(@socket, address)
     end
 
     def unbind(address)
-      Util.resultcode_ok? LibZMQ.unbind @socket, address
+      Util.resultcode_ok? LibZMQ.unbind(@socket, address)
     end
 
     def connect(address)
-      Util.resultcode_ok? LibZMQ.connect @socket, address
+      Util.resultcode_ok? LibZMQ.connect(@socket, address)
     end
 
     def disconnect(address)
-      Util.resultcode_ok? LibZMQ.disconnect @socket, address
+      Util.resultcode_ok? LibZMQ.disconnect(@socket, address)
     end
 
     def address

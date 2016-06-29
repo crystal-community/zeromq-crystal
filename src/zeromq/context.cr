@@ -7,10 +7,9 @@ class ZMQ::Context
   end
 
   def self.create(*socket_types, io_threads = IO_THREADS_DFLT, max_sockets = MAX_SOCKETS_DFLT)
-    return unless (ctx = new(io_threads, max_sockets))
-    sockets = [] of Socket
-    sockets = socket_types.map { |socket_type| ctx.socket(socket_type) }
-
+    ctx = new io_threads, max_sockets
+    sockets = ctx.sockets(*socket_types)
+    
     yield ctx, sockets
 
     sockets.each(&.close)
@@ -38,6 +37,18 @@ class ZMQ::Context
     else
       LibZMQ.ctx_destroy(@context)
     end
+  end
+
+  def sockets(*types)
+    types.map { |type| socket(type) }
+  end
+
+  def sockets(*types)
+    sockets = sockets(*types)
+
+    yield sockets
+
+    sockets.each &.close
   end
 
   def socket(type)

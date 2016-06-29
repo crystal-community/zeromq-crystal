@@ -97,8 +97,17 @@ module ZMQ::Util
       "zmq_ctx_set_monitor" == source
   end
 
-  def message_error?(source)
-    ["zmq_msg_init", "zmq_msg_init_data", "zmq_msg_copy", "zmq_msg_move", "zmq_msg_close", "zmq_msg_get",
-      "zmq_msg_more", "zmq_msg_recv", "zmq_msg_send", "zmq_msg_set"].includes?(source)
+  MSG_ERRORS = {"zmq_msg_init",
+                "zmq_msg_init_data",
+                "zmq_msg_copy",
+                "zmq_msg_move",
+                "zmq_msg_close",
+                "zmq_msg_get",
+                "zmq_msg_more",
+                "zmq_msg_recv",
+                "zmq_msg_send",
+                "zmq_msg_set"}
+  private def message_error?(source)
+    MSG_ERRORS.includes?(source)
   end
 end
