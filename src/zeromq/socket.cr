@@ -96,15 +96,15 @@ module ZMQ
 
     def set_socket_option(name, value)
       rc = case
-           when INT32_SOCKET_OPTIONS.includes?(name) && value.is_a?(Number)
-             value = value.to_i
-             LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int32)
-           when INT32_SOCKET_OPTIONS_V4.includes?(name) && value.is_a?(Number)
-             value = value.to_i
-             LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int32)
-           when INT64_SOCKET_OPTIONS.includes?(name) && value.is_a?(Number)
-             value = value.to_i64
-             LibZMQ.setsockopt @socket, name, pointerof(value).as(Void*), sizeof(Int64)
+           when INT32_SOCKET_OPTIONS.includes?(name) && value.is_a?(Int32)
+             value32 = value.to_i
+             LibZMQ.setsockopt(@socket, name, pointerof(value32).as(Void*), sizeof(Int32))
+           when INT32_SOCKET_OPTIONS_V4.includes?(name) && value.is_a?(Int32)
+             value32 = value.to_i
+             LibZMQ.setsockopt @socket, name, pointerof(value32).as(Void*), sizeof(Int32)
+           when INT64_SOCKET_OPTIONS.includes?(name) && value.is_a?(Int64)
+             value64 = value.to_i64
+             LibZMQ.setsockopt(@socket, name, pointerof(value64).as(Void*), sizeof(Int64))
            when STRING_SOCKET_OPTIONS.includes?(name) && value.is_a?(String)
              LibZMQ.setsockopt @socket, name, value.to_unsafe.as(Void*), value.size
            when STRING_SOCKET_OPTIONS_V4.includes?(name) && value.is_a?(String)
