@@ -32,8 +32,8 @@ before_install:
 
  - cd zeromq-$ZMQ
  - ./configure
- - make
- - make install
+ - sudo make
+ - sudo make install
  - cd ..
 
 script:
