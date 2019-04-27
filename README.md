@@ -1,6 +1,6 @@
 # zeromq
 
-[![Build status](https://travis-ci.org/benoist/zeromq-crystal.png?branch=master)](https://travis-ci.org/benoist/zeromq-crystal)
+[![Build status](https://travis-ci.org/benoist/zeromq-crystal.png?branch=master)](https://travis-ci.org/crystal-community/zeromq-crystal)
 
 Bindings for ZeroMQ (http://zero.mq)
 Ported from (https://github.com/chuckremes/ffi-rzmq-core) Thank you @chuckremes
