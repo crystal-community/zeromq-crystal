@@ -1,9 +1,50 @@
+# EventLoop support 
+# Crystal Update for zmq sockets
+module Crystal::EventLoop
+  def self.create_fd_write_event(sock : ZMQ::Socket, edge_triggered : Bool = false)
+      flags = LibEvent2::EventFlags::Write
+      flags |= LibEvent2::EventFlags::Persist | LibEvent2::EventFlags::ET #we always do this as ZMQ is edge triggers
+      event = @@eb.new_event(sock.fd, flags, sock) do |_, sflags, data|
+        sock_ref = data.as(ZMQ::Socket)
+        zmq_events = sock_ref.events
+        is_writable = zmq_events & ZMQ::POLLOUT
+        if is_writable && sflags.includes?(LibEvent2::EventFlags::Write)
+          sock_ref.resume_write
+        elsif sflags.includes?(LibEvent2::EventFlags::Timeout)
+          sock_ref.resume_write(timed_out: true)
+        end
+      end
+      event
+  end
+  def self.create_fd_read_event(sock : ZMQ::Socket, edge_triggered : Bool = false)
+      flags = LibEvent2::EventFlags::Read
+      flags |= LibEvent2::EventFlags::Persist | LibEvent2::EventFlags::ET #we always do this as ZMQ is edge triggers
+      event = @@eb.new_event(sock.fd, flags, sock) do |_, sflags, data|
+        sock_ref = data.as(ZMQ::Socket)
+        zmq_events = sock_ref.events
+        is_readable = zmq_events & ZMQ::POLLIN
+        if is_readable && sflags.includes?(LibEvent2::EventFlags::Read)
+          sock_ref.resume_read
+        elsif sflags.includes?(LibEvent2::EventFlags::Timeout)
+          sock_ref.resume_read(timed_out: true)
+        end
+      end
+      event
+  end
+  def self.stop_loop
+    @@eb.loop_break
+  end
+end
+
 module ZMQ
   class Socket
+    include IO::Syscall
     getter socket
     getter name : String
     getter? closed
-
+    @read_event : Crystal::Event?
+    @write_event : Crystal::Event?
+        
     def self.create(context : Context, type : Int32, message_type = Message) : self
       new context, type, message_type
     rescue e : ZMQ::ContextError
@@ -36,6 +77,19 @@ module ZMQ
       end
     end
 
+    # libevent  support
+    private def add_read_event(timeout = @read_timeout)
+      event = @read_event ||= Crystal::EventLoop.create_fd_read_event(self,true)
+      event.add timeout
+      nil
+    end
+
+    private def add_write_event(timeout = @write_timeout)
+      event = @write_event ||= Crystal::EventLoop.create_fd_write_event(self,true)
+      event.add timeout
+      nil
+    end
+
     def send_string(string, flags = 0)
       part = @message_type.new(string)
       send_message(part, flags)
@@ -47,8 +101,23 @@ module ZMQ
     end
 
     def send_message(message : AbstractMessage, flags = 0)
-      rc = LibZMQ.msg_send(message.address, @socket, flags) # NOTE: 0mq docs state that msg_send do not require message.close
-      Util.resultcode_ok?(rc)
+      # we always send in non block mode and add a wait writable, caller should close the message when done
+      loop do
+        rc = LibZMQ.msg_send(message.address, @socket, flags | ZMQ::DONTWAIT)
+        if rc == -1
+          if Util.errno == Errno::EAGAIN
+            wait_writable
+          else
+            raise Util.error_string
+          end
+        else
+          return Util.resultcode_ok?(rc)
+        end
+      end
+    ensure
+      if (writers = @writers) && !writers.empty?
+        add_write_event
+      end
     end
 
     def send_messages(messages : Array(AbstractMessage), flags = 0)
@@ -63,9 +132,23 @@ module ZMQ
     end
 
     def receive_message(flags = 0) : AbstractMessage
-      message = @message_type.new
-      LibZMQ.msg_recv(message.address, @socket, flags)
-      message
+      loop do
+        message = @message_type.new
+        rc = LibZMQ.msg_recv(message.address, @socket, flags | ZMQ::DONTWAIT)
+        if rc == -1
+            if Util.errno == Errno::EAGAIN
+              wait_readable
+            else
+              raise Util.error_string
+            end
+        else
+          return message
+        end
+      end
+    ensure
+      if (readers = @readers) && !readers.empty?
+        add_read_event
+      end
     end
 
     def receive_string(flags = 0)
@@ -73,26 +156,49 @@ module ZMQ
     end
 
     def receive_strings(flags = 0)
-      receive_messages.map(&.to_s)
+      receive_messages(flags).map do |msg|
+        str = msg.to_s
+        msg.close()
+        str
+      end
     end
 
     def receive_messages(flags = 0)
-      messages = [] of AbstractMessage
-
       loop do
+        messages = [] of AbstractMessage
         message = @message_type.new
-        rc = LibZMQ.msg_recv(message.address, @socket, flags)
-        if Util.resultcode_ok?(rc)
-          messages << message
-
-          return messages unless more_parts?
+        rc = LibZMQ.msg_recv(message.address, @socket, flags | ZMQ::DONTWAIT)
+        if rc == -1
+          if Util.errno == Errno::EAGAIN
+            wait_readable
+          else
+            raise Util.error_string
+          end
         else
-          message.close
-          messages.map(&.close)
-          return messages.clear
+          messages << message
+          if more_parts?
+            loop do
+              message = @message_type.new
+              rc = LibZMQ.msg_recv(message.address, @socket, flags)
+              if Util.resultcode_ok?(rc)
+                  messages << message
+                  return messages unless more_parts?
+              else
+                message.close
+                messages.map(&.close)
+                return messages.clear
+              end
+            end
+          else
+             return messages
+          end
         end
       end
-    end
+    ensure
+      if (readers = @readers) && !readers.empty?
+        add_read_event
+      end
+    end    
 
     def set_socket_option(name, value)
       rc = case
@@ -188,8 +294,20 @@ module ZMQ
     def finalize
       close
     end
+    # file descriptor
+    def fd
+      get_socket_option(ZMQ::FD).as(Int32)
+    end
+    # event list
+    def events
+      get_socket_option(ZMQ::EVENTS).as(Int32)
+    end
 
     def close
+      @read_event.try &.free
+      @read_event = nil
+      @write_event.try &.free
+      @write_event = nil
       @closed = true
       LibZMQ.close @socket
     end
