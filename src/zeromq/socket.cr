@@ -1,4 +1,4 @@
-# EventLoop support 
+# EventLoop support
 # Crystal Update for zmq sockets
 module Crystal::EventLoop
   def self.create_fd_write_event(sock : ZMQ::Socket, edge_triggered : Bool = false)
@@ -38,13 +38,13 @@ end
 
 module ZMQ
   class Socket
-    include IO::Syscall
+    include IO::Evented
     getter socket
     getter name : String
     getter? closed
     @read_event : Crystal::Event?
     @write_event : Crystal::Event?
-        
+
     def self.create(context : Context, type : Int32, message_type = Message) : self
       new context, type, message_type
     rescue e : ZMQ::ContextError
@@ -198,7 +198,7 @@ module ZMQ
       if (readers = @readers) && !readers.empty?
         add_read_event
       end
-    end    
+    end
 
     def set_socket_option(name, value)
       rc = case
