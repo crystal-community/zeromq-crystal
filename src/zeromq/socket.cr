@@ -42,8 +42,9 @@ module ZMQ
     getter socket
     getter name : String
     getter? closed
-    @read_event : Crystal::ThreadLocalValue(Crystal::Event)?
-    @write_event : Crystal::ThreadLocalValue(Crystal::Event)?
+
+    @read_event = Crystal::ThreadLocalValue(Crystal::Event).new
+    @write_event = Crystal::ThreadLocalValue(Crystal::Event).new
 
     def self.create(context : Context, type : Int32, message_type = Message) : self
       new context, type, message_type
@@ -79,13 +80,13 @@ module ZMQ
 
     # libevent  support
     private def add_read_event(timeout = @read_timeout)
-      event = @read_event ||= Crystal::EventLoop.create_fd_read_event(self,true)
+      event = @read_event.get { Crystal::EventLoop.create_fd_read_event(self,true) }
       event.add timeout
       nil
     end
 
     private def add_write_event(timeout = @write_timeout)
-      event = @write_event ||= Crystal::EventLoop.create_fd_write_event(self,true)
+      event = @write_event.get { Crystal::EventLoop.create_fd_write_event(self,true) }
       event.add timeout
       nil
     end
@@ -115,7 +116,7 @@ module ZMQ
         end
       end
     ensure
-      if (writers = @writers) && !writers.empty?
+      if (writers = @writers.get?) && !writers.empty?
         add_write_event
       end
     end
@@ -146,7 +147,7 @@ module ZMQ
         end
       end
     ensure
-      if (readers = @readers) && !readers.empty?
+      if (readers = @readers.get?) && !readers.empty?
         add_read_event
       end
     end
@@ -195,7 +196,7 @@ module ZMQ
         end
       end
     ensure
-      if (readers = @readers) && !readers.empty?
+      if (readers = @readers.get?) && !readers.empty?
         add_read_event
       end
     end
@@ -304,10 +305,17 @@ module ZMQ
     end
 
     def close
-      @read_event.get &.try &.free
-      @read_event = nil
-      @write_event.get &.try &.free
-      @write_event = nil
+      #de @read_event.try &.free
+      #de @read_event = nil
+      #de @write_event.try &.free
+      #de @write_event = nil
+
+      @read_event.each &.free
+      @read_event.clear
+
+      @write_event.each &.free
+      @write_event.clear
+
       @closed = true
       LibZMQ.close @socket
     end
