@@ -42,8 +42,8 @@ module ZMQ
     getter socket
     getter name : String
     getter? closed
-    @read_event : Crystal::Event | Crystal::ThreadLocalValue(Crystal::Event) | Nil
-    @write_event : Crystal::Event | Crystal::ThreadLocalValue(Crystal::Event) | Nil
+    @read_event : Crystal::ThreadLocalValue(Crystal::Event)?
+    @write_event : Crystal::ThreadLocalValue(Crystal::Event)?
 
     def self.create(context : Context, type : Int32, message_type = Message) : self
       new context, type, message_type
@@ -304,9 +304,9 @@ module ZMQ
     end
 
     def close
-      @read_event.try &.free
+      @read_event.get &.try &.free
       @read_event = nil
-      @write_event.try &.free
+      @write_event.get &.try &.free
       @write_event = nil
       @closed = true
       LibZMQ.close @socket
