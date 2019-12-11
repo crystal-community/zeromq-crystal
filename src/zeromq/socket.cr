@@ -305,11 +305,6 @@ module ZMQ
     end
 
     def close
-      #de @read_event.try &.free
-      #de @read_event = nil
-      #de @write_event.try &.free
-      #de @write_event = nil
-
       @read_event.each &.free
       @read_event.clear
 
