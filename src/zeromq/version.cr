@@ -1,5 +1,5 @@
 module ZMQ
-  VERSION = "0.2.11"
+  VERSION = "0.2.12"
 
   def self.version
     LibZMQ.version(out major, out minor, out patch)
