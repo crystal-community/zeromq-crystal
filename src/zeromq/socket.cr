@@ -2,35 +2,37 @@
 # Crystal Update for zmq sockets
 module Crystal::EventLoop
   def self.create_fd_write_event(sock : ZMQ::Socket, edge_triggered : Bool = false)
-      flags = LibEvent2::EventFlags::Write
-      flags |= LibEvent2::EventFlags::Persist | LibEvent2::EventFlags::ET #we always do this as ZMQ is edge triggers
-      event = @@eb.new_event(sock.fd, flags, sock) do |_, sflags, data|
-        sock_ref = data.as(ZMQ::Socket)
-        zmq_events = sock_ref.events
-        is_writable = zmq_events & ZMQ::POLLOUT
-        if is_writable && sflags.includes?(LibEvent2::EventFlags::Write)
-          sock_ref.resume_write
-        elsif sflags.includes?(LibEvent2::EventFlags::Timeout)
-          sock_ref.resume_write(timed_out: true)
-        end
+    flags = LibEvent2::EventFlags::Write
+    flags |= LibEvent2::EventFlags::Persist | LibEvent2::EventFlags::ET # we always do this as ZMQ is edge triggers
+    event = @@eb.new_event(sock.fd, flags, sock) do |_, sflags, data|
+      sock_ref = data.as(ZMQ::Socket)
+      zmq_events = sock_ref.events
+      is_writable = zmq_events & ZMQ::POLLOUT
+      if is_writable && sflags.includes?(LibEvent2::EventFlags::Write)
+        sock_ref.resume_write
+      elsif sflags.includes?(LibEvent2::EventFlags::Timeout)
+        sock_ref.resume_write(timed_out: true)
       end
-      event
+    end
+    event
   end
+
   def self.create_fd_read_event(sock : ZMQ::Socket, edge_triggered : Bool = false)
-      flags = LibEvent2::EventFlags::Read
-      flags |= LibEvent2::EventFlags::Persist | LibEvent2::EventFlags::ET #we always do this as ZMQ is edge triggers
-      event = @@eb.new_event(sock.fd, flags, sock) do |_, sflags, data|
-        sock_ref = data.as(ZMQ::Socket)
-        zmq_events = sock_ref.events
-        is_readable = zmq_events & ZMQ::POLLIN
-        if is_readable && sflags.includes?(LibEvent2::EventFlags::Read)
-          sock_ref.resume_read
-        elsif sflags.includes?(LibEvent2::EventFlags::Timeout)
-          sock_ref.resume_read(timed_out: true)
-        end
+    flags = LibEvent2::EventFlags::Read
+    flags |= LibEvent2::EventFlags::Persist | LibEvent2::EventFlags::ET # we always do this as ZMQ is edge triggers
+    event = @@eb.new_event(sock.fd, flags, sock) do |_, sflags, data|
+      sock_ref = data.as(ZMQ::Socket)
+      zmq_events = sock_ref.events
+      is_readable = zmq_events & ZMQ::POLLIN
+      if is_readable && sflags.includes?(LibEvent2::EventFlags::Read)
+        sock_ref.resume_read
+      elsif sflags.includes?(LibEvent2::EventFlags::Timeout)
+        sock_ref.resume_read(timed_out: true)
       end
-      event
+    end
+    event
   end
+
   def self.stop_loop
     @@eb.loop_break
   end
@@ -42,8 +44,9 @@ module ZMQ
     getter socket
     getter name : String
     getter? closed
-    @read_event : Crystal::Event?
-    @write_event : Crystal::Event?
+
+    @read_event = Crystal::ThreadLocalValue(Crystal::Event).new
+    @write_event = Crystal::ThreadLocalValue(Crystal::Event).new
 
     def self.create(context : Context, type : Int32, message_type = Message) : self
       new context, type, message_type
@@ -79,13 +82,13 @@ module ZMQ
 
     # libevent  support
     private def add_read_event(timeout = @read_timeout)
-      event = @read_event ||= Crystal::EventLoop.create_fd_read_event(self,true)
+      event = @read_event.get { Crystal::EventLoop.create_fd_read_event(self, true) }
       event.add timeout
       nil
     end
 
     private def add_write_event(timeout = @write_timeout)
-      event = @write_event ||= Crystal::EventLoop.create_fd_write_event(self,true)
+      event = @write_event.get { Crystal::EventLoop.create_fd_write_event(self, true) }
       event.add timeout
       nil
     end
@@ -115,7 +118,7 @@ module ZMQ
         end
       end
     ensure
-      if (writers = @writers) && !writers.empty?
+      if (writers = @writers.get?) && !writers.empty?
         add_write_event
       end
     end
@@ -136,17 +139,17 @@ module ZMQ
         message = @message_type.new
         rc = LibZMQ.msg_recv(message.address, @socket, flags | ZMQ::DONTWAIT)
         if rc == -1
-            if Util.errno == Errno::EAGAIN
-              wait_readable
-            else
-              raise Util.error_string
-            end
+          if Util.errno == Errno::EAGAIN
+            wait_readable
+          else
+            raise Util.error_string
+          end
         else
           return message
         end
       end
     ensure
-      if (readers = @readers) && !readers.empty?
+      if (readers = @readers.get?) && !readers.empty?
         add_read_event
       end
     end
@@ -158,7 +161,7 @@ module ZMQ
     def receive_strings(flags = 0)
       receive_messages(flags).map do |msg|
         str = msg.to_s
-        msg.close()
+        msg.close
         str
       end
     end
@@ -181,8 +184,8 @@ module ZMQ
               message = @message_type.new
               rc = LibZMQ.msg_recv(message.address, @socket, flags)
               if Util.resultcode_ok?(rc)
-                  messages << message
-                  return messages unless more_parts?
+                messages << message
+                return messages unless more_parts?
               else
                 message.close
                 messages.map(&.close)
@@ -190,12 +193,12 @@ module ZMQ
               end
             end
           else
-             return messages
+            return messages
           end
         end
       end
     ensure
-      if (readers = @readers) && !readers.empty?
+      if (readers = @readers.get?) && !readers.empty?
         add_read_event
       end
     end
@@ -294,20 +297,24 @@ module ZMQ
     def finalize
       close
     end
+
     # file descriptor
     def fd
       get_socket_option(ZMQ::FD).as(Int32)
     end
+
     # event list
     def events
       get_socket_option(ZMQ::EVENTS).as(Int32)
     end
 
     def close
-      @read_event.try &.free
-      @read_event = nil
-      @write_event.try &.free
-      @write_event = nil
+      @read_event.each &.free
+      @read_event.clear
+
+      @write_event.each &.free
+      @write_event.clear
+
       @closed = true
       LibZMQ.close @socket
     end
