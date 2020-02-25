@@ -2,8 +2,8 @@ module ZMQ::Util
   extend self
 
   def curve_keypair
-    public_key = FFI::MemoryPointer.from_string(" " * 41)
-    private_key = FFI::MemoryPointer.from_string(" " * 41)
+    public_key = " " * 41
+    private_key = " " * 41
     rc = LibZMQ.curve_keypair public_key, private_key
 
     if rc < 0
@@ -11,7 +11,7 @@ module ZMQ::Util
         "Rebuild zeromq with libsodium to enable CURVE security options."
     end
 
-    [public_key.read_string, private_key.read_string]
+    [public_key, private_key]
   end
 
   # Returns true when +rc+ is greater than or equal to 0, false otherwise.
