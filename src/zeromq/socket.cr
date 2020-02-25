@@ -303,6 +303,10 @@ module ZMQ
       get_socket_option(ZMQ::FD).as(Int32)
     end
 
+    def check_open
+      # Evented Interface requirement
+    end
+
     # event list
     def events
       get_socket_option(ZMQ::EVENTS).as(Int32)
