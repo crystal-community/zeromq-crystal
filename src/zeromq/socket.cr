@@ -309,10 +309,10 @@ module ZMQ
     end
 
     def close
-      @read_event.each &.free
+      @read_event.consume_each &.free
       @read_event.clear
 
-      @write_event.each &.free
+      @write_event.consume_each &.free
       @write_event.clear
 
       @closed = true
