@@ -305,14 +305,15 @@ module ZMQ
     end
 
     def close
-      @read_event.each &.free
-      @read_event.clear
-
-      @write_event.each &.free
-      @write_event.clear
-
+      @read_event.consume_each &.free
+      @write_event.consume_each &.free
       @closed = true
       LibZMQ.close @socket
+    end
+
+    #de Copied from ::IO itself, since IO::Evented does not have this:
+    protected def check_open
+      raise IO::Error.new "Closed stream" if closed?
     end
   end
 end
