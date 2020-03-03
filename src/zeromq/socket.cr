@@ -311,7 +311,7 @@ module ZMQ
       LibZMQ.close @socket
     end
 
-    #de Copied from ::IO itself, since IO::Evented does not have this:
+    # Copied from ::IO itself, since IO::Evented does not have this:
     protected def check_open
       raise IO::Error.new "Closed stream" if closed?
     end
