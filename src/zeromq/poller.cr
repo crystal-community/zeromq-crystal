@@ -60,7 +60,7 @@ class ZMQ::Poller
     register(socket, POLLOUT)
   end
 
-  def deregister( socket : Socket, type = POLLIN | POLLOUT)
+  def deregister(socket : Socket, type = POLLIN | POLLOUT)
     @poll_items.delete({socket, type})
   end
 
