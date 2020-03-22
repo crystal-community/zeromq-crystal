@@ -8,5 +8,5 @@ build:
 	mkdir -p libzmq/build; \
 	cd libzmq/build; \
 	cmake ..; \
-	make; \
+	make -j8; \
 	sudo make install

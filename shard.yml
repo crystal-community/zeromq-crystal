@@ -1,8 +1,14 @@
 name: zeromq
 version: 0.3.0
 
+crystal: 0.33.0
+license: MIT
+
 authors:
   - Benoist Claassen <benoist.claassen@gmail.com>
   - digitalextremist <code@extremist.digital>
 
-license: MIT
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 0.11.0
