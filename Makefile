@@ -7,6 +7,6 @@ build:
 	git clone --depth=1 https://github.com/zeromq/libzmq.git
 	mkdir -p libzmq/build; \
 	cd libzmq/build; \
-	cmake ..; \
+	cmake -DCMAKE_INSTALL_PREFIX=/usr ..; \
 	make -j8; \
 	sudo make install
