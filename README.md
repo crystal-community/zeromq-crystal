@@ -18,7 +18,7 @@ dependencies:
 ## Usage
 
 ```crystal
-require "../src/zeromq"
+require "zeromq"
 
 # Simple server
 context = ZMQ::Context.new
