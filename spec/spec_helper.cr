@@ -22,9 +22,9 @@ module APIHelper
   end
 
   def connect_to_inproc(socket : ZMQ::Socket, endpoint : String, timeout = 3)
-    started = Time.now
+    started = Time.local
     loop do
-      break if socket.connect(endpoint) || (started - Time.now).seconds > timeout # ZMQ::Util.resultcode_ok?(rc)
+      break if socket.connect(endpoint) || (started - Time.local).seconds > timeout # ZMQ::Util.resultcode_ok?(rc)
     end
   end
 

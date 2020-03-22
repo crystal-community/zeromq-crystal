@@ -59,4 +59,16 @@ class ZMQ::Poller
   def register_writable(socket)
     register(socket, POLLOUT)
   end
+
+  def deregister(socket : Socket, type = POLLIN | POLLOUT)
+    @poll_items.delete({socket, type})
+  end
+
+  def deregister_readable(socket : Socket)
+    deregister(socket, POLLIN)
+  end
+
+  def deregister_writable(socket : Socket)
+    register(socket, POLLOUT)
+  end
 end
