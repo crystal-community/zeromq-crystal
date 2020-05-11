@@ -28,7 +28,7 @@ poller = ZMQ::Poller.new
 poller.register_readable(s2)
 poller.register_readable(s1)
 
-start_time = Time.now
+start_time = Time.monotonic
 
 # kick it off
 message = ZMQ::Message.new("a" * message_size)
@@ -47,8 +47,8 @@ until i == 0
   end
 end
 
-span = (Time.now - start_time)
-latency = span.ticks.to_f / roundtrip_count / 2.0
+span = (Time.monotonic - start_time)
+latency = span.total_microseconds / roundtrip_count / 2.0
 
 puts "mean latency: %.3f [us]" % latency
 puts "messages per second: %.3f " % (roundtrip_count / span.total_seconds)

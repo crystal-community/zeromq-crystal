@@ -6,7 +6,7 @@ link = "tcp://127.0.0.1:5555"
 
 close = Channel(Nil).new
 
-start = Time.now
+start = Time.monotonic
 
 spawn do
   puts "Start server"
@@ -40,6 +40,6 @@ end
 close.receive
 context.terminate
 
-seconds = (Time.now - start).total_seconds
+seconds = (Time.monotonic - start).total_seconds
 puts "Messages per second: #{(num_requests * 2) / seconds.to_f}"
 puts "Total seconds: #{seconds}"
