@@ -82,13 +82,13 @@ module ZMQ
 
     # libevent  support
     private def add_read_event(timeout = @read_timeout)
-      event = @read_event.get { Crystal::EventLoop.create_fd_read_event(self, true) }
+      event = @read_event.get { Crystal::EventLoop.create_fd_read_event(self,true) }
       event.add timeout
       nil
     end
 
     private def add_write_event(timeout = @write_timeout)
-      event = @write_event.get { Crystal::EventLoop.create_fd_write_event(self, true) }
+      event = @write_event.get { Crystal::EventLoop.create_fd_write_event(self,true) }
       event.add timeout
       nil
     end
@@ -108,7 +108,7 @@ module ZMQ
       loop do
         rc = LibZMQ.msg_send(message.address, @socket, flags | ZMQ::DONTWAIT)
         if rc == -1
-          if Util.errno == Errno::EAGAIN
+          if Util.errno == Errno::EAGAIN.to_i
             wait_writable
           else
             raise Util.error_string
@@ -172,7 +172,7 @@ module ZMQ
         message = @message_type.new
         rc = LibZMQ.msg_recv(message.address, @socket, flags | ZMQ::DONTWAIT)
         if rc == -1
-          if Util.errno == Errno::EAGAIN
+          if Util.errno == Errno::EAGAIN.to_i
             wait_readable
           else
             raise Util.error_string
@@ -314,11 +314,14 @@ module ZMQ
 
     def close
       @read_event.consume_each &.free
-
       @write_event.consume_each &.free
-
       @closed = true
       LibZMQ.close @socket
+    end
+
+    # Copied from ::IO itself, since IO::Evented does not have this:
+    protected def check_open
+      raise IO::Error.new "Closed stream" if closed?
     end
   end
 end
