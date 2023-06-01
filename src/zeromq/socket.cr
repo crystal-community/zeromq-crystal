@@ -1,5 +1,3 @@
-require "crystal/thread_local_value"
-
 # EventLoop support
 # Crystal Update for zmq sockets
 class Crystal::LibEvent::EventLoop
