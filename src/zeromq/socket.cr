@@ -32,6 +32,10 @@ class Crystal::LibEvent::EventLoop
     end
     event
   end
+
+  def stop_loop
+    event_base.loop_break
+  end
 end
 
 module ZMQ
