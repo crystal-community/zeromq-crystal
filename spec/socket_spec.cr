@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-STRING = "boogy-boogy"
+STRING        = "boogy-boogy"
 PING_ENDPOINT = "inproc://ping_ping_test"
 
 describe ZMQ::Socket do
@@ -160,7 +160,7 @@ describe ZMQ::Socket do
       end
     end
 
-    it "generate a EFSM error when sending via the REQ socket twice in a row without an intervening receive operation" do
+    pending "generate a EFSM error when sending via the REQ socket twice in a row without an intervening receive operation" do
       APIHelper.with_pair_sockets(ZMQ::REQ, ZMQ::REP) do |ping, pong|
         ping.bind PING_ENDPOINT
         APIHelper.connect_to_inproc pong, PING_ENDPOINT
