@@ -1,0 +1,26 @@
+name: "Test"
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+
+jobs:
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v22
+    - uses: cachix/cachix-action@v12
+      with:
+        name: devenv
+    - name: Install devenv.sh
+      run: nix profile install tarball+https://install.devenv.sh/latest
+      shell: sh
+    - name: Install Crystal
+      uses: crystal-lang/install-crystal@v1
+    - run: devenv ci
+    - run: devenv shell crystal spec
