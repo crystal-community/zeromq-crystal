@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 {
-  languages.c.enable = true;
+  languages.crystal.enable = true;
 
-  packages = [ pkgs.zeromq pkgs.pkg-config ];
+  packages = [ pkgs.zeromq ];
 }
