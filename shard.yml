@@ -6,3 +6,5 @@ authors:
   - digitalextremist <code@extremist.digital>
 
 license: MIT
+
+crystal: ">= 1.8.0, < 2.0.0"
